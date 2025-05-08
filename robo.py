@@ -19,17 +19,24 @@ body = """
 <html>
   <body style="font-family: Arial, sans-serif; background-color: #f8f8f8; padding: 20px;">
     <table style="width: 100%; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);">
-      <tr>
-        <td style="text-align: center; padding: 20px;">
-          <h1 style="color: #ff6a00;">Jogo Ao Vivo Hoje!</h1>
-          <p style="color: #333333; font-size: 16px;">Não perca a emoção do jogo ao vivo, transmitido sem anúncios, na BolaPlayTV!</p>
-          <img src="URL_DA_IMAGEM_DO_JOGO_AO_VIVO" alt="Imagem do Jogo" style="max-width: 100%; border-radius: 8px; margin-top: 20px;">
+       
+        <tr>
+         
+        <td style="text-align: center; ">
+            <img src="https://bolaplaytv.com.br/img/banner_bolaplaytv.jpg" alt="Imagem do Jogo" style="max-width: 100%; border-radius: 8px; ">
+        <div style="padding: 20px;">
+            <h1 style="color: #ff6a00;">Você Vai Assistir GRÁTIS!</h1>
+            <p style="color: #333333; font-size: 16px;"><b>BolaPlayTV</b> está de volta, trazendo uma nova maneira de assistir aos seus jogos favoritos com qualidade excepcional e sem interrupções de anúncios!</p>
+            <p style="color: #333333; font-size: 16px;"><b>E o melhor:</b> Use o código abaixo e assista totalmente de graça com um bônus exclusivo para você!</p>
+            <p style="font-weight: bold; color: #ff6a00; font-size: 18px;">Seu código de bônus: <b>NGNPY</b></p>
+            
+       </div>
         </td>
       </tr>
       <tr>
         <td style="padding: 20px; text-align: center; background-color: #ff6a00; color: #ffffff; border-radius: 0 0 8px 8px;">
-          <p style="font-size: 14px;">Clique abaixo para assistir ao vivo:</p>
-          <a href="URL_DO_JOGO_AO_VIVO" style="text-decoration: none; background-color: #ffffff; color: #ff6a00; padding: 12px 25px; border-radius: 4px; font-weight: bold;">Assistir Agora</a>
+          <p style="font-size: 14px; ">Clique abaixo para assistir ao vivo:</p> <br>
+          <a href="https://bolaplaytv.com.br" style=" text-decoration: none; background-color: #ffffff; color: #ff6a00; padding: 12px 25px; border-radius: 4px; font-weight: bold;">Assistir Agora</a>
         </td>
       </tr>
     </table>
@@ -52,7 +59,7 @@ try:
             message = MIMEMultipart()
             message["From"] = sender
             message["To"] = email_receiver
-            message["Subject"] = "Notificação: Jogo Ao Vivo Hoje no BolaPlayTV"
+            message["Subject"] = "FUTEBOL AO VIVO GRÁTIS"
             message.attach(MIMEText(body, "html"))
 
             # Envia o e-mail individualmente
