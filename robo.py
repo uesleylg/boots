@@ -1,70 +1,96 @@
-import smtplib
-import ssl
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+import requests
 
-# Configurações SMTP
-smtp_server = "smtp.hostinger.com"
-smtp_port = 465
-email_sender = "no-reply@bolaplaytv.com.br"
-email_password = "789456123Numlock@"
+# Taxa da exchange (em %)
+TAXA = 0.1  # 0,1%
 
-# Nome do remetente
-sender_name = "Bola Play TV"
-sender_email = email_sender
-sender = f"{sender_name} <{sender_email}>"
+# Exchanges e endpoints públicos
+exchanges = {
+    "binance": {
+        "TRX": "https://api.binance.com/api/v3/ticker/price?symbol=TRXUSDT",
+        "XLM": "https://api.binance.com/api/v3/ticker/price?symbol=XLMUSDT",
+        "DOGE": "https://api.binance.com/api/v3/ticker/price?symbol=DOGEUSDT",
+        "ADA": "https://api.binance.com/api/v3/ticker/price?symbol=ADAUSDT",
+        "MATIC": "https://api.binance.com/api/v3/ticker/price?symbol=MATICUSDT",
+        "SOL": "https://api.binance.com/api/v3/ticker/price?symbol=SOLUSDT",
+        "SHIB": "https://api.binance.com/api/v3/ticker/price?symbol=SHIBUSDT",
+        "AVAX": "https://api.binance.com/api/v3/ticker/price?symbol=AVAXUSDT",
+        "FTM": "https://api.binance.com/api/v3/ticker/price?symbol=FTMUSDT",
+        "LUNA": "https://api.binance.com/api/v3/ticker/price?symbol=LUNAUSDT"
+    },
+    "coinbase": {
+        "TRX": "https://api.coinbase.com/v2/prices/TRX-USD/spot",
+        "XLM": "https://api.coinbase.com/v2/prices/XLM-USD/spot",
+        "DOGE": "https://api.coinbase.com/v2/prices/DOGE-USD/spot",
+        "ADA": "https://api.coinbase.com/v2/prices/ADA-USD/spot",
+        "MATIC": "https://api.coinbase.com/v2/prices/MATIC-USD/spot",
+        "SOL": "https://api.coinbase.com/v2/prices/SOL-USD/spot",
+        "SHIB": "https://api.coinbase.com/v2/prices/SHIB-USD/spot",
+        "AVAX": "https://api.coinbase.com/v2/prices/AVAX-USD/spot",
+        "FTM": "https://api.coinbase.com/v2/prices/FTM-USD/spot",
+        "LUNA": "https://api.coinbase.com/v2/prices/LUNA-USD/spot"
+    },
+    "coinex": {
+        "TRX": "https://api.coinex.com/v1/market/ticker?market=TRXUSDT",
+        "XLM": "https://api.coinex.com/v1/market/ticker?market=XLMUSDT",
+        "DOGE": "https://api.coinex.com/v1/market/ticker?market=DOGEUSDT",
+        "ADA": "https://api.coinex.com/v1/market/ticker?market=ADAUSDT",
+        "MATIC": "https://api.coinex.com/v1/market/ticker?market=MATICUSDT",
+        "SOL": "https://api.coinex.com/v1/market/ticker?market=SOLUSDT",
+        "SHIB": "https://api.coinex.com/v1/market/ticker?market=SHIBUSDT",
+        "AVAX": "https://api.coinex.com/v1/market/ticker?market=AVAXUSDT",
+        "FTM": "https://api.coinex.com/v1/market/ticker?market=FTMUSDT",
+        "LUNA": "https://api.coinex.com/v1/market/ticker?market=LUNAUSDT"
+    }
+}
 
-# Corpo do e-mail em HTML
-body = """
-<html>
-  <body style="font-family: Arial, sans-serif; background-color: #f8f8f8; padding: 20px;">
-    <table style="width: 100%; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);">
-       
-        <tr>
-         
-        <td style="text-align: center; ">
-            <img src="https://bolaplaytv.com.br/img/banner_bolaplaytv.jpg" alt="Imagem do Jogo" style="max-width: 100%; border-radius: 8px; ">
-        <div style="padding: 20px;">
-            <h1 style="color: #ff6a00;">Você Vai Assistir GRÁTIS!</h1>
-            <p style="color: #333333; font-size: 16px;"><b>BolaPlayTV</b> está de volta, trazendo uma nova maneira de assistir aos seus jogos favoritos com qualidade excepcional e sem interrupções de anúncios!</p>
-            <p style="color: #333333; font-size: 16px;"><b>E o melhor:</b> Use o código abaixo e assista totalmente de graça com um bônus exclusivo para você!</p>
-            <p style="font-weight: bold; color: #ff6a00; font-size: 18px;">Seu código de bônus: <b>NGNPY</b></p>
-            
-       </div>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding: 20px; text-align: center; background-color: #ff6a00; color: #ffffff; border-radius: 0 0 8px 8px;">
-          <p style="font-size: 14px; ">Clique abaixo para assistir ao vivo:</p> <br>
-          <a href="https://bolaplaytv.com.br" style=" text-decoration: none; background-color: #ffffff; color: #ff6a00; padding: 12px 25px; border-radius: 4px; font-weight: bold;">Assistir Agora</a>
-        </td>
-      </tr>
-    </table>
-  </body>
-</html>
-"""
+# Buscar preços
+precos = {}
+for exchange, moedas in exchanges.items():
+    precos[exchange] = {}
+    for moeda, url in moedas.items():
+        try:
+            data = requests.get(url, timeout=5).json()
+            if exchange == "binance":
+                precos[exchange][moeda] = float(data['price'])
+            elif exchange == "coinbase":
+                precos[exchange][moeda] = float(data['data']['amount'])
+            elif exchange == "coinex":
+                precos[exchange][moeda] = float(data['data']['ticker']['last'])
+        except Exception as e:
+            print(f"Erro ao pegar preço de {moeda} em {exchange}: {e}")
 
-# Lê os e-mails do arquivo
-with open("emails.txt", "r") as f:
-    email_list = [line.strip() for line in f if line.strip()]
+# Mostrar preços
+moedas_lista = ["TRX","XLM","DOGE","ADA","MATIC","SOL","SHIB","AVAX","FTM","LUNA"]
 
-# Conexão segura com o servidor SMTP
-context = ssl.create_default_context()
+for moeda in moedas_lista:
+    print(f"\nPreços de {moeda} (USD):")
+    for exchange in precos:
+        if moeda in precos[exchange]:
+            print(f"{exchange}: {precos[exchange][moeda]}")
 
-try:
-    with smtplib.SMTP_SSL(smtp_server, smtp_port, context=context) as server:
-        server.login(email_sender, email_password)
-        for email_receiver in email_list:
-            # Cria a mensagem para cada destinatário
-            message = MIMEMultipart()
-            message["From"] = sender
-            message["To"] = email_receiver
-            message["Subject"] = "FUTEBOL AO VIVO GRÁTIS"
-            message.attach(MIMEText(body, "html"))
+# Calcular spread máximo e lucro líquido
+for moeda in moedas_lista:
+    moeda_precos = {ex: precos[ex][moeda] for ex in precos if moeda in precos[ex]}
+    if len(moeda_precos) > 1:
+        mais_barato = min(moeda_precos, key=moeda_precos.get)
+        mais_caro = max(moeda_precos, key=moeda_precos.get)
+        preco_compra = moeda_precos[mais_barato]
+        preco_venda = moeda_precos[mais_caro]
 
-            # Envia o e-mail individualmente
-            server.sendmail(email_sender, email_receiver, message.as_string())
-            print(f"E-mail enviado para: {email_receiver}")
+        # Spread bruto (%)
+        spread = (preco_venda - preco_compra) / preco_compra * 100
 
-except Exception as e:
-    print(f"Erro ao enviar e-mails: {e}")
+        # Cálculo das taxas
+        taxa_compra = preco_compra * TAXA / 100
+        taxa_venda = preco_venda * TAXA / 100
+        lucro_liquido = (preco_venda - preco_compra) - (taxa_compra + taxa_venda)
+
+        if lucro_liquido > 0:
+            status = "💰 Arbitragem lucrativa!"
+        else:
+            status = "⚠️ Arbitragem não compensa com as taxas."
+
+        print(f"\nMaior oportunidade de arbitragem {moeda}: comprar em {mais_barato} e vender em {mais_caro}")
+        print(f"Spread bruto: {spread:.2f}%")
+        print(f"Lucro líquido considerando taxas: {lucro_liquido:.6f} USD")
+        print(status)
