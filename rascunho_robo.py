@@ -1,9 +1,7 @@
 import requests
 
-# Taxa da exchange (em %)
-TAXA = 0.1  # 0,1%
-
-# Exchanges e endpoints públicos
+# Dicionário com as exchanges e os endpoints públicos para cada moeda
+# Cada chave é o nome da exchange e dentro temos as moedas com suas URLs
 exchanges = {
     "binance": {
         "TRX": "https://api.binance.com/api/v3/ticker/price?symbol=TRXUSDT",
@@ -43,54 +41,33 @@ exchanges = {
     }
 }
 
-# Buscar preços
+# Dicionário para armazenar os preços coletados
 precos = {}
+
+# Loop para buscar os preços em cada exchange
 for exchange, moedas in exchanges.items():
-    precos[exchange] = {}
+    precos[exchange] = {}  # cria um dicionário vazio para cada exchange
     for moeda, url in moedas.items():
         try:
+            # Faz a requisição HTTP para o endpoint da moeda
             data = requests.get(url, timeout=5).json()
+
+            # Cada exchange retorna os dados em formatos diferentes
             if exchange == "binance":
-                precos[exchange][moeda] = float(data['price'])
+                precos[exchange][moeda] = float(data['price'])  # pega o preço direto
             elif exchange == "coinbase":
-                precos[exchange][moeda] = float(data['data']['amount'])
+                precos[exchange][moeda] = float(data['data']['amount'])  # está dentro de 'data'
             elif exchange == "coinex":
-                precos[exchange][moeda] = float(data['data']['ticker']['last'])
+                precos[exchange][moeda] = float(data['data']['ticker']['last'])  # último preço
         except Exception as e:
             print(f"Erro ao pegar preço de {moeda} em {exchange}: {e}")
 
-# Mostrar preços
+# Lista de moedas que vamos exibir
 moedas_lista = ["TRX","XLM","DOGE","ADA","MATIC","SOL","SHIB","AVAX","FTM","LUNA"]
 
+# Exibir os preços coletados
 for moeda in moedas_lista:
-    print(f"\nPreços de {moeda} (USD):")
+    print(f"\n📊 Preços de {moeda} (USD):")
     for exchange in precos:
         if moeda in precos[exchange]:
-            print(f"{exchange}: {precos[exchange][moeda]}")
-
-# Calcular spread máximo e lucro líquido
-for moeda in moedas_lista:
-    moeda_precos = {ex: precos[ex][moeda] for ex in precos if moeda in precos[ex]}
-    if len(moeda_precos) > 1:
-        mais_barato = min(moeda_precos, key=moeda_precos.get)
-        mais_caro = max(moeda_precos, key=moeda_precos.get)
-        preco_compra = moeda_precos[mais_barato]
-        preco_venda = moeda_precos[mais_caro]
-
-        # Spread bruto (%)
-        spread = (preco_venda - preco_compra) / preco_compra * 100
-
-        # Cálculo das taxas
-        taxa_compra = preco_compra * TAXA / 100
-        taxa_venda = preco_venda * TAXA / 100
-        lucro_liquido = (preco_venda - preco_compra) - (taxa_compra + taxa_venda)
-
-        if lucro_liquido > 0:
-            status = "💰 Arbitragem lucrativa!"
-        else:
-            status = "⚠️ Arbitragem não compensa com as taxas."
-
-        print(f"\nMaior oportunidade de arbitragem {moeda}: comprar em {mais_barato} e vender em {mais_caro}")
-        print(f"Spread bruto: {spread:.2f}%")
-        print(f"Lucro líquido considerando taxas: {lucro_liquido:.6f} USD")
-        print(status)
+            print(f"  {exchange}: {precos[exchange][moeda]}")
