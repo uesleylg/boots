@@ -1,7 +1,6 @@
 import requests
 
-# Dicionário com as exchanges e os endpoints públicos para cada moeda
-# Cada chave é o nome da exchange e dentro temos as moedas com suas URLs
+# API de cada exchanges
 exchanges = {
     "binance": {
         "TRX": "https://api.binance.com/api/v3/ticker/price?symbol=TRXUSDT",
@@ -41,10 +40,10 @@ exchanges = {
     }
 }
 
-# Dicionário para armazenar os preços coletados
+# Aqui armazena os preços das moedas após coletar da api exchanges
 precos = {}
 
-# Loop para buscar os preços em cada exchange
+# Aqui fazer a varredura na api e coletar o valores de cada moeda em cada 
 for exchange, moedas in exchanges.items():
     precos[exchange] = {}  # cria um dicionário vazio para cada exchange
     for moeda, url in moedas.items():
@@ -71,3 +70,4 @@ for moeda in moedas_lista:
     for exchange in precos:
         if moeda in precos[exchange]:
             print(f"  {exchange}: {precos[exchange][moeda]}")
+
