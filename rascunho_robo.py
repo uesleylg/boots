@@ -1,13 +1,11 @@
 import requests
+import time
 
 # Taxa da exchange (em %)
 TAXA = 0.1  # 0,1%
 
-# Cotação do dólar
-try:
-    usd_brl = float(requests.get("https://economia.awesomeapi.com.br/json/last/USD-BRL").json()["USDBRL"]["bid"])
-except:
-    usd_brl = 5.0  # fallback se API falhar
+# Lista de moedas monitoradas
+moedas_lista = ["TRX","XLM","DOGE","ADA","MATIC","SOL","SHIB","AVAX","FTM","LUNA","BTC","ETH"]
 
 # Exchanges e endpoints públicos
 exchanges = {
@@ -16,7 +14,7 @@ exchanges = {
         "XLM": "https://api.binance.com/api/v3/ticker/bookTicker?symbol=XLMUSDT",
         "DOGE": "https://api.binance.com/api/v3/ticker/bookTicker?symbol=DOGEUSDT",
         "ADA": "https://api.binance.com/api/v3/ticker/bookTicker?symbol=ADAUSDT",
-        "MATIC": "https://api.binance.com/api/v3/ticker/bookTicker?symbol=MATICUSDT",
+        "MATIC": "https://api.binance.com/api/v3/ticker/bookTicker?symbol=POLUSDT",
         "SOL": "https://api.binance.com/api/v3/ticker/bookTicker?symbol=SOLUSDT",
         "SHIB": "https://api.binance.com/api/v3/ticker/bookTicker?symbol=SHIBUSDT",
         "AVAX": "https://api.binance.com/api/v3/ticker/bookTicker?symbol=AVAXUSDT",
@@ -30,7 +28,7 @@ exchanges = {
         "XLM": "https://api.coinbase.com/v2/prices/XLM-USD/spot",
         "DOGE": "https://api.coinbase.com/v2/prices/DOGE-USD/spot",
         "ADA": "https://api.coinbase.com/v2/prices/ADA-USD/spot",
-        "MATIC": "https://api.coinbase.com/v2/prices/MATIC-USD/spot",
+        "MATIC": "https://api.coinbase.com/v2/prices/POL-USD/spot",
         "SOL": "https://api.coinbase.com/v2/prices/SOL-USD/spot",
         "SHIB": "https://api.coinbase.com/v2/prices/SHIB-USD/spot",
         "AVAX": "https://api.coinbase.com/v2/prices/AVAX-USD/spot",
@@ -44,7 +42,7 @@ exchanges = {
         "XLM": "https://api.coinex.com/v1/market/ticker?market=XLMUSDT",
         "DOGE": "https://api.coinex.com/v1/market/ticker?market=DOGEUSDT",
         "ADA": "https://api.coinex.com/v1/market/ticker?market=ADAUSDT",
-        "MATIC": "https://api.coinex.com/v1/market/ticker?market=MATICUSDT",
+        "MATIC": "https://api.coinex.com/v1/market/ticker?market=POLUSDT",
         "SOL": "https://api.coinex.com/v1/market/ticker?market=SOLUSDT",
         "SHIB": "https://api.coinex.com/v1/market/ticker?market=SHIBUSDT",
         "AVAX": "https://api.coinex.com/v1/market/ticker?market=AVAXUSDT",
@@ -55,8 +53,15 @@ exchanges = {
     }
 }
 
+# Função para buscar cotação do dólar
+def pegar_usd():
+    try:
+        return float(requests.get("https://economia.awesomeapi.com.br/json/last/USD-BRL").json()["USDBRL"]["bid"])
+    except:
+        return 5.0
+
 # Função para buscar preços e normalizar dados
-def pegar_precos():
+def pegar_precos(usd_brl):
     precos = {}
     for exchange, moedas in exchanges.items():
         precos[exchange] = {}
@@ -86,57 +91,30 @@ def pegar_precos():
                 print(f"Erro ao pegar preço de {moeda} em {exchange}: {e}")
     return precos
 
-# Lista de moedas monitoradas
-moedas_lista = ["TRX","XLM","DOGE","ADA","MATIC","SOL","SHIB","AVAX","FTM","LUNA","BTC","ETH"]
+# Loop principal
+while True:
+    usd_brl = pegar_usd()
+    precos = pegar_precos(usd_brl)
+    
+    for moeda in moedas_lista:
+        asks = {ex: precos[ex][moeda]["ask"] for ex in precos if moeda in precos[ex] and precos[ex][moeda]["ask"] > 0}
+        bids = {ex: precos[ex][moeda]["bid"] for ex in precos if moeda in precos[ex] and precos[ex][moeda]["bid"] > 0}
 
-# Buscar preços
-precos = pegar_precos()
+        if len(asks) > 0 and len(bids) > 0:
+            ex_compra = min(asks, key=asks.get)
+            preco_compra = asks[ex_compra]
 
-# Mostrar preços em BRL
-for moeda in moedas_lista:
-    print(f"\n📊 Preços de {moeda} (BRL):")
-    for exchange in precos:
-        if moeda in precos[exchange]:
-            bid = precos[exchange][moeda]["bid"]
-            ask = precos[exchange][moeda]["ask"]
-            bidVol = precos[exchange][moeda]["bidVol"]
-            askVol = precos[exchange][moeda]["askVol"]
-            print(f"{exchange}: bid={bid:.4f} (vol {bidVol}) | ask={ask:.4f} (vol {askVol})")
+            ex_venda = max(bids, key=bids.get)
+            preco_venda = bids[ex_venda]
 
-# Calcular oportunidades de arbitragem
-for moeda in moedas_lista:
-    asks = {ex: precos[ex][moeda]["ask"] for ex in precos if moeda in precos[ex] and precos[ex][moeda]["ask"] > 0}
-    bids = {ex: precos[ex][moeda]["bid"] for ex in precos if moeda in precos[ex] and precos[ex][moeda]["bid"] > 0}
+            taxa_compra = preco_compra * TAXA / 100
+            taxa_venda = preco_venda * TAXA / 100
+            lucro_unitario = (preco_venda - preco_compra) - (taxa_compra + taxa_venda)
 
-    if len(asks) > 0 and len(bids) > 0:
-        ex_compra = min(asks, key=asks.get)
-        preco_compra = asks[ex_compra]
-        vol_compra = precos[ex_compra][moeda]["askVol"]
-
-        ex_venda = max(bids, key=bids.get)
-        preco_venda = bids[ex_venda]
-        vol_venda = precos[ex_venda][moeda]["bidVol"]
-
-        if preco_compra > 0:
-            spread = (preco_venda - preco_compra) / preco_compra * 100
-        else:
-            spread = 0
-
-        volume_max = min(vol_compra, vol_venda) if vol_compra and vol_venda else None
-
-        taxa_compra = preco_compra * TAXA / 100
-        taxa_venda = preco_venda * TAXA / 100
-        lucro_unitario = (preco_venda - preco_compra) - (taxa_compra + taxa_venda)
-        lucro_total = lucro_unitario * volume_max if volume_max else None
-
-        status = "💰 Arbitragem lucrativa!" if lucro_unitario > 0 and (lucro_total is None or lucro_total > 0) else "⚠️ Arbitragem não compensa com as taxas."
-
-        print(f"\n🚀 Oportunidade {moeda}: comprar em {ex_compra} e vender em {ex_venda}")
-        print(f"Spread bruto: {spread:.2f}%")
-        print(f"Lucro unitário (1 {moeda}): R$ {lucro_unitario:.4f}")
-        if volume_max:
-            print(f"Volume max possível: {volume_max} {moeda}")
-            print(f"Lucro total possível: R$ {lucro_total:.2f}")
-        else:
-            print("Volume não informado para uma das exchanges.")
-        print(status)
+            if lucro_unitario > 0:
+                print(f"\n💸 Oportunidade de arbitragem encontrada para {moeda}!")
+                print(f"Comprar em {ex_compra} por R$ {preco_compra:.4f}")
+                print(f"Vender em {ex_venda} por R$ {preco_venda:.4f}")
+                print(f"Lucro unitário: R$ {lucro_unitario:.4f}")
+    
+    time.sleep(10)  # espera 10 segundos antes de buscar novamente
