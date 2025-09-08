@@ -18,7 +18,7 @@ exchanges = {
         "SOL": "https://api.binance.com/api/v3/ticker/bookTicker?symbol=SOLUSDT",
         "SHIB": "https://api.binance.com/api/v3/ticker/bookTicker?symbol=SHIBUSDT",
         "AVAX": "https://api.binance.com/api/v3/ticker/bookTicker?symbol=AVAXUSDT",
-        "FTM": "https://api.binance.com/api/v3/ticker/bookTicker?symbol=FTMUSDT",
+       
         "LUNA": "https://api.binance.com/api/v3/ticker/bookTicker?symbol=LUNAUSDT",
         "BTC": "https://api.binance.com/api/v3/ticker/bookTicker?symbol=BTCUSDT",
         "ETH": "https://api.binance.com/api/v3/ticker/bookTicker?symbol=ETHUSDT"
@@ -32,7 +32,7 @@ exchanges = {
         "SOL": "https://api.coinbase.com/v2/prices/SOL-USD/spot",
         "SHIB": "https://api.coinbase.com/v2/prices/SHIB-USD/spot",
         "AVAX": "https://api.coinbase.com/v2/prices/AVAX-USD/spot",
-        "FTM": "https://api.coinbase.com/v2/prices/FTM-USD/spot",
+       
         "LUNA": "https://api.coinbase.com/v2/prices/LUNA-USD/spot",
         "BTC": "https://api.coinbase.com/v2/prices/BTC-USD/spot",
         "ETH": "https://api.coinbase.com/v2/prices/ETH-USD/spot"
@@ -46,7 +46,7 @@ exchanges = {
         "SOL": "https://api.coinex.com/v1/market/ticker?market=SOLUSDT",
         "SHIB": "https://api.coinex.com/v1/market/ticker?market=SHIBUSDT",
         "AVAX": "https://api.coinex.com/v1/market/ticker?market=AVAXUSDT",
-        "FTM": "https://api.coinex.com/v1/market/ticker?market=FTMUSDT",
+
         "LUNA": "https://api.coinex.com/v1/market/ticker?market=LUNAUSDT",
         "BTC": "https://api.coinex.com/v1/market/ticker?market=BTCUSDT",
         "ETH": "https://api.coinex.com/v1/market/ticker?market=ETHUSDT"
