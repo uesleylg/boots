@@ -10,7 +10,8 @@ MOEDAS = [
     "ENJ_USDT", "CHZ_USDT", "STMX_USDT"
 ]
 
-SPREAD_MINIMO = 0.1  # em %
+TAXA_SPOT = 0.05  # % do taker
+TAXA_FUTURO = 0.02  # % do taker
 
 async def ping(ws):
     while True:
@@ -41,20 +42,18 @@ async def monitor_moeda(simbolo):
 
                 # Atualiza preço SPOT
                 elif data.get("channel") == "push.ticker" and 'data' in data:
-                    preco_spot = data['data']['lastPrice']
+                    preco_spot = float(data['data']['lastPrice'])
 
-                # Imprime a cada 2 segundos
+                # Verifica oportunidades
                 if preco_futuro is not None and preco_spot is not None:
-                    if time.time() - ultima_impressao > 2:
-                        ultima_impressao = time.time()
-                        spread = (preco_futuro - preco_spot) / preco_spot * 100
-                       # print(f"{simbolo} | Futuro: {preco_futuro} | Spot: {preco_spot} | Spread: {spread:.2f}%")
+                    # Calculo do spread líquido considerando taxas
+                    spread_liquido = (preco_futuro - preco_spot) / preco_spot * 100 - (TAXA_SPOT + TAXA_FUTURO)
 
-                        if abs(spread) >= SPREAD_MINIMO:
-                            if spread > 0:
-                                print(f"Oportunidade {simbolo}: COMPRAR Spot e VENDER Futuro | Spread: {spread:.2f}%")
-                            else:
-                                print(f"Oportunidade {simbolo}: VENDER Spot e COMPRAR Futuro | Spread: {spread:.2f}%")
+                    # Alerta somente se for lucrativo
+                    if spread_liquido > 0:
+                        if time.time() - ultima_impressao > 2:
+                            ultima_impressao = time.time()
+                            print(f"⚡ Oportunidade {simbolo}: COMPRAR Spot e VENDER Futuro | Spread Líquido: {spread_liquido:.2f}%")
 
             except Exception as e:
                 print(f"[{simbolo}] Erro: {e}")
