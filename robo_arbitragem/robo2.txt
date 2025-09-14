@@ -1,120 +1,125 @@
-import requests
+import asyncio
+import websockets
+import json
 import time
 
-# Taxa da exchange (em %)
-TAXA = 0.1  # 0,1%
+MOEDAS = ["BTC_USDT", "DOGE_USDT", "GALA_USDT"]
+URL_MEXC = "wss://contract.mexc.com/edge"
 
-# Lista de moedas monitoradas
-moedas_lista = ["TRX","XLM","DOGE","ADA","MATIC","SOL","SHIB","AVAX","FTM","LUNA","BTC","ETH"]
+# Taxas (em decimal)
+TAXA_BINANCE = 0.002  # 0.075% usando BNB
+TAXA_MEXC = 0.0005      # 0.05% Spot Taker
 
-# Exchanges e endpoints públicos
-exchanges = {
-    "binance": {
-        "TRX": "https://api.binance.com/api/v3/ticker/bookTicker?symbol=TRXUSDT",
-        "XLM": "https://api.binance.com/api/v3/ticker/bookTicker?symbol=XLMUSDT",
-        "DOGE": "https://api.binance.com/api/v3/ticker/bookTicker?symbol=DOGEUSDT",
-        "ADA": "https://api.binance.com/api/v3/ticker/bookTicker?symbol=ADAUSDT",
-        "MATIC": "https://api.binance.com/api/v3/ticker/bookTicker?symbol=POLUSDT",
-        "SOL": "https://api.binance.com/api/v3/ticker/bookTicker?symbol=SOLUSDT",
-        "SHIB": "https://api.binance.com/api/v3/ticker/bookTicker?symbol=SHIBUSDT",
-        "AVAX": "https://api.binance.com/api/v3/ticker/bookTicker?symbol=AVAXUSDT",
-       
-        "LUNA": "https://api.binance.com/api/v3/ticker/bookTicker?symbol=LUNAUSDT",
-        "BTC": "https://api.binance.com/api/v3/ticker/bookTicker?symbol=BTCUSDT",
-        "ETH": "https://api.binance.com/api/v3/ticker/bookTicker?symbol=ETHUSDT"
-    },
-    "coinbase": {
-        "TRX": "https://api.coinbase.com/v2/prices/TRX-USD/spot",
-        "XLM": "https://api.coinbase.com/v2/prices/XLM-USD/spot",
-        "DOGE": "https://api.coinbase.com/v2/prices/DOGE-USD/spot",
-        "ADA": "https://api.coinbase.com/v2/prices/ADA-USD/spot",
-        "MATIC": "https://api.coinbase.com/v2/prices/POL-USD/spot",
-        "SOL": "https://api.coinbase.com/v2/prices/SOL-USD/spot",
-        "SHIB": "https://api.coinbase.com/v2/prices/SHIB-USD/spot",
-        "AVAX": "https://api.coinbase.com/v2/prices/AVAX-USD/spot",
-       
-        "LUNA": "https://api.coinbase.com/v2/prices/LUNA-USD/spot",
-        "BTC": "https://api.coinbase.com/v2/prices/BTC-USD/spot",
-        "ETH": "https://api.coinbase.com/v2/prices/ETH-USD/spot"
-    },
-    "coinex": {
-        "TRX": "https://api.coinex.com/v1/market/ticker?market=TRXUSDT",
-        "XLM": "https://api.coinex.com/v1/market/ticker?market=XLMUSDT",
-        "DOGE": "https://api.coinex.com/v1/market/ticker?market=DOGEUSDT",
-        "ADA": "https://api.coinex.com/v1/market/ticker?market=ADAUSDT",
-        "MATIC": "https://api.coinex.com/v1/market/ticker?market=POLUSDT",
-        "SOL": "https://api.coinex.com/v1/market/ticker?market=SOLUSDT",
-        "SHIB": "https://api.coinex.com/v1/market/ticker?market=SHIBUSDT",
-        "AVAX": "https://api.coinex.com/v1/market/ticker?market=AVAXUSDT",
+# Armazena últimos preços
+precos_mexc = {}
+precos_binance = {}
 
-        "LUNA": "https://api.coinex.com/v1/market/ticker?market=LUNAUSDT",
-        "BTC": "https://api.coinex.com/v1/market/ticker?market=BTCUSDT",
-        "ETH": "https://api.coinex.com/v1/market/ticker?market=ETHUSDT"
-    }
-}
+# Fila de preços (origem, par, preço)
+fila_precos = asyncio.Queue()
 
-# Função para buscar cotação do dólar
-def pegar_usd():
-    try:
-        return float(requests.get("https://economia.awesomeapi.com.br/json/last/USD-BRL").json()["USDBRL"]["bid"])
-    except:
-        return 5.0
 
-# Função para buscar preços e normalizar dados
-def pegar_precos(usd_brl):
-    precos = {}
-    for exchange, moedas in exchanges.items():
-        precos[exchange] = {}
-        for moeda, url in moedas.items():
+async def ping(ws):
+    while True:
+        await asyncio.sleep(15)
+        try:
+            await ws.send(json.dumps({"method": "ping"}))
+        except:
+            break
+
+
+async def handler_mexc(simbolos):
+    async with websockets.connect(URL_MEXC) as ws:
+        print("[MEXC] Conectado")
+
+        # Subscrição de todos os pares Spot
+        for simbolo in simbolos:
+            await ws.send(json.dumps({
+                "method": "sub.ticker",
+                "param": {"symbol": simbolo}
+            }))
+
+        asyncio.create_task(ping(ws))
+
+        while True:
             try:
-                data = requests.get(url, timeout=5).json()
-                if exchange == "binance":
-                    precos[exchange][moeda] = {
-                        "bid": float(data["bidPrice"]) * usd_brl,
-                        "ask": float(data["askPrice"]) * usd_brl,
-                        "bidVol": float(data["bidQty"]),
-                        "askVol": float(data["askQty"])
-                    }
-                elif exchange == "coinbase":
-                    price = float(data['data']['amount']) * usd_brl
-                    precos[exchange][moeda] = {
-                        "bid": price, "ask": price,
-                        "bidVol": None, "askVol": None
-                    }
-                elif exchange == "coinex":
-                    price = float(data['data']['ticker']['last']) * usd_brl
-                    precos[exchange][moeda] = {
-                        "bid": price, "ask": price,
-                        "bidVol": None, "askVol": None
-                    }
+                msg = await ws.recv()
+                data = json.loads(msg)
+
+                if data.get("channel") == "push.ticker" and "data" in data:
+                    simbolo = data.get("symbol")
+                    preco = float(data["data"]["lastPrice"])
+                    await fila_precos.put(("MEXC", simbolo, preco))
             except Exception as e:
-                print(f"Erro ao pegar preço de {moeda} em {exchange}: {e}")
-    return precos
+                print(f"[MEXC] Erro: {e}")
+                break
 
-# Loop principal
-while True:
-    usd_brl = pegar_usd()
-    precos = pegar_precos(usd_brl)
-    
-    for moeda in moedas_lista:
-        asks = {ex: precos[ex][moeda]["ask"] for ex in precos if moeda in precos[ex] and precos[ex][moeda]["ask"] > 0}
-        bids = {ex: precos[ex][moeda]["bid"] for ex in precos if moeda in precos[ex] and precos[ex][moeda]["bid"] > 0}
 
-        if len(asks) > 0 and len(bids) > 0:
-            ex_compra = min(asks, key=asks.get)
-            preco_compra = asks[ex_compra]
+async def handler_binance(simbolo):
+    par_binance = simbolo.replace("_", "").lower()
+    url = f"wss://stream.binance.com:9443/ws/{par_binance}@trade"
 
-            ex_venda = max(bids, key=bids.get)
-            preco_venda = bids[ex_venda]
+    async with websockets.connect(url) as ws:
+        print(f"[Binance] Conectado ao par {simbolo}")
+        asyncio.create_task(ping(ws))
 
-            taxa_compra = preco_compra * TAXA / 100
-            taxa_venda = preco_venda * TAXA / 100
-            lucro_unitario = (preco_venda - preco_compra) - (taxa_compra + taxa_venda)
+        while True:
+            try:
+                msg = await ws.recv()
+                data = json.loads(msg)
 
-            if lucro_unitario > 0:
-                print(f"\n💸 Oportunidade de arbitragem encontrada para {moeda}!")
-                print(f"Comprar em {ex_compra} por R$ {preco_compra:.4f}")
-                print(f"Vender em {ex_venda} por R$ {preco_venda:.4f}")
-                print(f"Lucro unitário: R$ {lucro_unitario:.4f}")
-    
-    time.sleep(10)  # espera 10 segundos antes de buscar novamente
+                if "p" in data:
+                    preco = float(data["p"])
+                    await fila_precos.put(("BINANCE", simbolo, preco))
+            except Exception as e:
+                print(f"[Binance {simbolo}] Erro: {e}")
+                break
+
+
+async def processador_spreads():
+    ultima_impressao = {}
+
+    while True:
+        origem, simbolo, preco = await fila_precos.get()
+
+        if origem == "MEXC":
+            precos_mexc[simbolo] = preco
+        elif origem == "BINANCE":
+            precos_binance[simbolo] = preco
+
+        if simbolo in precos_mexc and simbolo in precos_binance:
+            preco_mexc = precos_mexc[simbolo]
+            preco_binance = precos_binance[simbolo]
+
+            agora = time.time()
+            if agora - ultima_impressao.get(simbolo, 0) > 2:
+                ultima_impressao[simbolo] = agora
+
+                # Spread líquido MEXC -> Binance
+                custo_compra_mexc = preco_mexc * (1 + TAXA_MEXC)
+                valor_venda_binance = preco_binance * (1 - TAXA_BINANCE)
+                spread_liquido_mb = (valor_venda_binance - custo_compra_mexc) / custo_compra_mexc * 100
+
+                # Spread líquido Binance -> MEXC
+                custo_compra_binance = preco_binance * (1 + TAXA_BINANCE)
+                valor_venda_mexc = preco_mexc * (1 - TAXA_MEXC)
+                spread_liquido_bm = (valor_venda_mexc - custo_compra_binance) / custo_compra_binance * 100
+
+                if spread_liquido_mb > 0:
+                    print(f"⚡ {simbolo}: COMPRAR MEXC ({preco_mexc}) e VENDER BINANCE ({preco_binance}) | Spread líquido: {spread_liquido_mb:.2f}%")
+                elif spread_liquido_bm > 0:
+                    print(f"⚡ {simbolo}: COMPRAR BINANCE ({preco_binance}) e VENDER MEXC ({preco_mexc}) | Spread líquido: {spread_liquido_bm:.2f}%")
+
+async def main():
+    tarefas = [
+        handler_mexc(MOEDAS),
+        processador_spreads()
+    ]
+
+    for simbolo in MOEDAS:
+        tarefas.append(handler_binance(simbolo))
+
+    await asyncio.gather(*tarefas)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
