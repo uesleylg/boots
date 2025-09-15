@@ -9,8 +9,8 @@ URL_MEXC = "wss://contract.mexc.com/edge"
 URL_BINANCE = "wss://stream.binance.com:9443/ws/galausdt@trade"  # Alterado para DOGE_USDT
 
 # Taxas de transação (em decimal)
-TAXA_BINANCE = 0.001  # 0,2% usando BNB
-TAXA_MEXC = 0.0005    # 0,05% Spot Taker
+TAXA_BINANCE = 0.001 
+TAXA_MEXC = 0.0005  
 
 # Fila de preços
 fila_precos = asyncio.Queue()
