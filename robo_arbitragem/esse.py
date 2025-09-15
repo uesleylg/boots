@@ -1,4 +1,3 @@
-
 import asyncio
 import websockets
 import json
@@ -9,8 +8,8 @@ URL_MEXC = "wss://contract.mexc.com/edge"
 URL_BINANCE = "wss://stream.binance.com:9443/ws/galausdt@trade"  # Alterado para DOGE_USDT
 
 # Taxas de transação (em decimal)
-TAXA_BINANCE = 0.001 
-TAXA_MEXC = 0.0005  
+TAXA_BINANCE = 0.001  # 0,2% usando BNB
+TAXA_MEXC = 0.0005    # 0,05% Spot Taker
 
 # Fila de preços
 fila_precos = asyncio.Queue()
@@ -70,7 +69,6 @@ async def handler_binance():
                 break
 
 # Função para monitorar a arbitragem e calcular o spread
-# Função para monitorar a arbitragem e calcular o spread
 async def monitorar_arbitragem():
     precos_mexc = {}
     precos_binance = {}
@@ -99,11 +97,14 @@ async def monitorar_arbitragem():
             valor_venda_mexc = preco_mexc * (1 - TAXA_MEXC)  # Preço de venda na MEXC com taxa
             spread_liquido_bm = (valor_venda_mexc - custo_compra_binance) / custo_compra_binance * 100
 
-            # Exibindo as oportunidades de arbitragem
+            # Obtém a hora atual
+            hora_atual = time.strftime("%H:%M:%S")
+
+            # Exibindo as oportunidades de arbitragem com a hora
             if spread_liquido_mb > 0:
-                print(f"⚡ DOGE_USDT: COMPRAR MEXC ({preco_mexc:.6f}) e VENDER BINANCE ({preco_binance:.6f}) | Spread líquido: {spread_liquido_mb:.4f}%")
+                print(f"{hora_atual} ⚡ DOGE_USDT: COMPRAR MEXC ({preco_mexc:.6f}) e VENDER BINANCE ({preco_binance:.6f}) | Spread líquido: {spread_liquido_mb:.4f}%")
             if spread_liquido_bm > 0:
-                print(f"⚡ DOGE_USDT: COMPRAR BINANCE ({preco_binance:.6f}) e VENDER MEXC ({preco_mexc:.6f}) | Spread líquido: {spread_liquido_bm:.4f}%")
+                print(f"{hora_atual} ⚡ DOGE_USDT: COMPRAR BINANCE ({preco_binance:.6f}) e VENDER MEXC ({preco_mexc:.6f}) | Spread líquido: {spread_liquido_bm:.4f}%")
 
 # Função principal para rodar tudo
 async def main():
